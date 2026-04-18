@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Adorish — 생산 수량 플래너</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --yellow:#FFFFA6;--black:#262626;--white:#ffffff;
+  --gray1:#F2F2F2;--gray2:#D9D9D9;--gray3:#BFBFBF;--gray5:#8C8C8C;--gray7:#595959;
+  --red-light:#FCEBEB;--red-mid:#F09595;--red-dark:#A32D2D;--red-text:#712B13;
+  --amber-light:#FAEEDA;--amber-dark:#854F0B;
+  --green-light:#EAF3DE;--green-dark:#3B6D11;
+  --blue-light:#E6F1FB;--blue-dark:#185FA5;--blue-text:#0C447C;
+  --purple-light:#EEEDFE;--purple-dark:#3C3489;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:14px;
+  --shadow:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--gray1);color:var(--black);min-height:100vh;font-size:14px;line-height:1.6}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:var(--black);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid rgba(255,255,166,0.15)}
+.logo-mark{width:10px;height:10px;background:var(--yellow);border-radius:50%;display:inline-block;margin-right:8px}
+.logo-text{font-size:13px;font-weight:700;letter-spacing:0.12em;color:var(--yellow);text-transform:uppercase}
+.logo-sub{font-size:10px;color:rgba(255,255,166,0.5);letter-spacing:0.06em;margin-top:4px}
+.sidebar-nav{padding:16px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 24px;font-size:12px;color:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.15s;border-left:2px solid transparent;letter-spacing:0.02em}
+.nav-item:hover{color:rgba(255,255,255,0.85);background:rgba(255,255,166,0.05)}
+.nav-item.active{color:var(--yellow);border-left-color:var(--yellow);background:rgba(255,255,166,0.08)}
+.nav-num{font-family:'DM Mono',monospace;font-size:10px;opacity:0.5}
+.sidebar-actions{padding:16px 20px;border-top:1px solid rgba(255,255,166,0.1)}
+.save-btn{width:100%;padding:9px;background:var(--yellow);color:var(--black);border:none;border-radius:var(--radius-md);font-size:12px;font-weight:700;cursor:pointer;transition:opacity 0.15s}
+.save-btn:hover{opacity:0.85}
+.load-select{width:100%;margin-top:8px;padding:7px 10px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:var(--radius-md);color:rgba(255,255,255,0.7);font-size:11px;font-family:'Noto Sans KR',sans-serif}
+.load-select option{background:#262626}
+.main{padding:32px 36px;max-width:860px}
+.page-title{font-size:22px;font-weight:700;color:var(--black);margin-bottom:4px;letter-spacing:-0.02em}
+.page-sub{font-size:13px;color:var(--gray5);margin-bottom:28px}
+.card{background:var(--white);border-radius:var(--radius-lg);border:0.5px solid var(--gray2);padding:24px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-title{font-size:11px;font-weight:700;color:var(--gray5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px}
+.alert{border-radius:var(--radius-md);padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.6}
+.alert-warn{background:var(--red-light);border:0.5px solid var(--red-mid);color:var(--red-text)}
+.alert-info{background:var(--blue-light);border:0.5px solid #85B7EB;color:var(--blue-text)}
+.alert-ok{background:var(--green-light);border:0.5px solid #97C459;color:var(--green-dark)}
+textarea{width:100%;min-height:160px;font-size:12px;font-family:'DM Mono',monospace;border:0.5px solid var(--gray2);border-radius:var(--radius-md);padding:12px;resize:vertical;background:var(--gray1);color:var(--black)}
+textarea:focus{outline:none;border-color:var(--gray5)}
+input[type=number],input[type=text],select{border:0.5px solid var(--gray2);border-radius:var(--radius-md);padding:6px 10px;font-size:12px;font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--black)}
+input:focus,select:focus{outline:none;border-color:var(--black)}
+.hint{font-size:12px;color:var(--gray5);margin-bottom:14px;line-height:1.7}
+.hint strong{color:var(--black)}
+.btn-primary{background:var(--black);color:var(--yellow);border:none;padding:9px 22px;border-radius:var(--radius-md);font-size:12px;font-weight:700;cursor:pointer;transition:opacity 0.15s;font-family:'Noto Sans KR',sans-serif}
+.btn-primary:hover{opacity:0.8}
+.btn-secondary{background:transparent;color:var(--black);border:0.5px solid var(--gray2);padding:9px 22px;border-radius:var(--radius-md);font-size:12px;cursor:pointer;transition:all 0.15s;font-family:'Noto Sans KR',sans-serif}
+.btn-secondary:hover{border-color:var(--gray5);background:var(--gray1)}
+.btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}
+.param-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.param-item label{font-size:11px;color:var(--gray7);display:block;margin-bottom:5px;font-weight:500}
+.trow{display:grid;gap:6px;align-items:start;font-size:12px;padding:9px 0;border-bottom:0.5px solid var(--gray1)}
+.trow:last-child{border-bottom:none}
+.trow-head{font-size:10px;font-weight:700;color:var(--gray5);text-transform:uppercase;letter-spacing:0.05em;align-items:center}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;display:inline-block}
+.badge-red{background:var(--red-light);color:var(--red-dark)}
+.badge-green{background:var(--green-light);color:var(--green-dark)}
+.badge-blue{background:var(--blue-light);color:var(--blue-dark)}
+.badge-purple{background:var(--purple-light);color:var(--purple-dark)}
+.tag{font-size:10px;padding:1px 6px;border-radius:4px;display:inline-block;margin-right:3px}
+.tag-red{background:var(--red-light);color:var(--red-dark)}
+.tag-neu{background:var(--gray1);color:var(--gray7)}
+.tag-purple{background:var(--purple-light);color:var(--purple-dark)}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--gray1);border-radius:var(--radius-md);padding:14px}
+.stat-label{font-size:10px;font-weight:700;color:var(--gray5);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.stat-val{font-size:24px;font-weight:700;color:var(--black);line-height:1.1}
+.stat-sub{font-size:11px;color:var(--gray5);margin-top:3px}
+.divider{height:0.5px;background:var(--gray1);margin:18px 0}
+.inline-row{display:flex;align-items:flex-end;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.cb-label{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray7);cursor:pointer}
+input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--black)}
+.color-box{background:var(--gray1);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px}
+.new-sku-box{background:var(--gray1);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px}
+.panel{display:none}.panel.active{display:block}
+.moq-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--gray1);font-size:12px}
+.moq-row:last-child{border-bottom:none}
+.qty-input{width:64px;font-size:12px;border:0.5px solid var(--gray2);border-radius:var(--radius-sm);padding:3px 6px;text-align:right;font-family:'DM Mono',monospace}
+.qty-input:focus{outline:none;border-color:var(--black)}
+
+/* ── 파일 업로드 드롭존 ── */
+.upload-area{
+  border:2px dashed var(--gray2);border-radius:var(--radius-lg);
+  padding:36px 24px;text-align:center;cursor:pointer;
+  transition:all 0.2s;background:var(--gray1);margin-bottom:16px;
+  position:relative;
+}
+.upload-area:hover,.upload-area.dragover{border-color:var(--black);background:var(--white)}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{width:40px;height:40px;margin:0 auto 12px;background:var(--black);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.upload-icon svg{fill:var(--yellow)}
+.upload-title{font-size:14px;font-weight:700;color:var(--black);margin-bottom:4px}
+.upload-sub{font-size:12px;color:var(--gray5)}
+.upload-badge{display:inline-block;background:var(--yellow);color:var(--black);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:8px}
+
+/* 탭 전환 */
+.tab-row{display:flex;gap:0;margin-bottom:16px;border:0.5px solid var(--gray2);border-radius:var(--radius-md);overflow:hidden;width:fit-content}
+.tab-btn{padding:7px 18px;font-size:12px;border:none;background:transparent;cursor:pointer;color:var(--gray5);font-family:'Noto Sans KR',sans-serif;transition:all 0.15s}
+.tab-btn.active{background:var(--black);color:var(--yellow);font-weight:700}
+
+/* 컬럼 매핑 */
+.col-map-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.col-map-item label{font-size:11px;color:var(--gray7);display:block;margin-bottom:4px;font-weight:500}
+.preview-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}
+.preview-table th{background:var(--gray1);padding:6px 10px;text-align:left;font-weight:700;color:var(--gray7);border-bottom:1px solid var(--gray2)}
+.preview-table td{padding:5px 10px;border-bottom:0.5px solid var(--gray1);color:var(--black)}
+.preview-table tr:last-child td{border-bottom:none}
+
+@media(max-width:700px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{height:auto;position:static}
+  .sidebar-nav{display:flex;padding:8px 12px;gap:4px;overflow-x:auto}
+  .nav-item{padding:7px 12px;border-left:none;border-bottom:2px solid transparent;white-space:nowrap}
+  .nav-item.active{border-left:none;border-bottom-color:var(--yellow)}
+  .main{padding:20px 16px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .param-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div><span class="logo-mark"></span><span class="logo-text">Adorish</span></div>
+    <div class="logo-sub">생산 수량 플래너</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="go(0)" id="nav0"><span class="nav-num">01</span> 재고 데이터</div>
+    <div class="nav-item" onclick="go(1)" id="nav1"><span class="nav-num">02</span> 품절·런칭 확인</div>
+    <div class="nav-item" onclick="go(2)" id="nav2"><span class="nav-num">03</span> 신규 옵션</div>
+    <div class="nav-item" onclick="go(3)" id="nav3"><span class="nav-num">04</span> 파라미터</div>
+    <div class="nav-item" onclick="go(4)" id="nav4"><span class="nav-num">05</span> 결과</div>
+  </nav>
+  <div class="sidebar-actions">
+    <button class="save-btn" onclick="saveSession()">현재 데이터 저장</button>
+    <select class="load-select" id="sessionSelect" onchange="loadSession(this.value)">
+      <option value="">— 저장된 데이터 불러오기 —</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- STEP 0 -->
+  <div class="panel active" id="p0">
+    <div class="page-title">재고 데이터 입력</div>
+    <div class="page-sub">엑셀 파일 업로드 또는 직접 붙여넣기</div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab-upload" onclick="switchTab('upload')">엑셀 업로드</button>
+      <button class="tab-btn" id="tab-paste" onclick="switchTab('paste')">직접 붙여넣기</button>
+    </div>
+
+    <!-- 엑셀 업로드 -->
+    <div id="tabUpload">
+      <div class="card">
+        <div class="card-title">엑셀 파일 업로드</div>
+        <div class="upload-area" id="dropZone"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleDrop(event)">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])"/>
+          <div class="upload-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 13h8v1.5H8V13zm0 3h8v1.5H8V16zm0-6h3v1.5H8V7z"/></svg>
+          </div>
+          <div class="upload-title">파일을 여기에 끌어다 놓거나 클릭해서 선택</div>
+          <div class="upload-sub">.xlsx · .xls · .csv 파일 지원</div>
+          <span class="upload-badge">엑셀 파일 선택</span>
+        </div>
+
+        <!-- 시트/컬럼 매핑 (파일 로드 후 표시) -->
+        <div id="mappingArea" style="display:none">
+          <div class="divider"></div>
+          <div class="card-title">컬럼 매핑</div>
+          <div class="hint">엑셀의 어느 컬럼이 어떤 데이터인지 지정해주세요.</div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;color:var(--gray7);font-weight:500;display:block;margin-bottom:5px">시트 선택</label>
+            <select id="sheetSelect" style="width:200px" onchange="onSheetChange()"></select>
+          </div>
+          <div class="col-map-grid">
+            <div class="col-map-item"><label>SKU명 컬럼 <span style="color:var(--gray5);font-weight:400">(옵션·컬러·사이즈 정보)</span></label><select id="colSku" style="width:100%" onchange="renderPreview()"></select></div>
+            <div class="col-map-item"><label>상품명 컬럼 <span style="color:var(--gray5);font-weight:400">(선택 — 앞에 붙여서 SKU 완성)</span></label><select id="colSkuPrefix" style="width:100%" onchange="renderPreview()"></select></div>
+            <div class="col-map-item"><label>현재 재고 컬럼</label><select id="colStock" style="width:100%" onchange="renderPreview()"></select></div>
+            <div class="col-map-item"><label>1주 발주 합계 컬럼</label><select id="colW1" style="width:100%" onchange="renderPreview()"></select></div>
+            <div class="col-map-item"><label>4주 발주 합계 컬럼</label><select id="colW4" style="width:100%" onchange="renderPreview()"></select></div>
+            <div class="col-map-item"><label>12주 발주 합계 컬럼 (선택)</label><select id="colW12" style="width:100%" onchange="renderPreview()"></select></div>
+          </div>
+          <div id="previewArea"></div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="applyMapping()">이 설정으로 불러오기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 붙여넣기 -->
+    <div id="tabPaste" style="display:none">
+      <div class="card">
+        <div class="card-title">직접 붙여넣기</div>
+        <div class="hint">컬럼 순서: <strong>SKU명 · 현재재고 · 1주발주 · 4주발주 · 12주발주</strong><br>SKU명은 <strong>제품명_컬러_사이즈</strong> 형식 권장</div>
+        <textarea id="rawInput" placeholder="텐션브라_블랙_S&#9;45&#9;12&#9;48&#9;180&#10;텐션브라_블랙_M&#9;32&#9;18&#9;70&#9;250"></textarea>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="parseFromPaste()">데이터 불러오기</button>
+          <button class="btn-secondary" onclick="loadSample()">샘플 데이터</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="p0res"></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="panel" id="p1">
+    <div class="page-title">품절 · 런칭 예정 확인</div>
+    <div class="page-sub">각 SKU의 상태를 확인하고 필요 시 체크해주세요</div>
+    <div class="card">
+      <div class="hint">
+        <strong>품절 체크</strong> — 1주 데이터 무시, 4주+12주 평균으로 실수요 추정<br>
+        <strong>런칭 예정 체크</strong> — 판매 이력 없는 기존 SKU. 참고 SKU 입력 시 그 판매율 기반으로 계산
+      </div>
+      <div id="soPanel"><div class="alert alert-info">1단계에서 데이터를 먼저 입력해주세요.</div></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="panel" id="p2">
+    <div class="page-title">신규 옵션 추가</div>
+    <div class="page-sub">완전 새로운 컬러 또는 사이즈 추가 시 사용해요</div>
+    <div class="card">
+      <div class="hint">
+        <strong>참고 SKU</strong> — 유사 기존 SKU의 주간 판매율을 기준으로 삼아요<br>
+        <strong>수요 비율(%)</strong> — 참고 SKU 대비 예상 판매 비율. 신규 컬러는 보통 50~70% 권장
+      </div>
+      <div id="newList"></div>
+      <button class="btn-secondary" onclick="addNew()" style="margin-top:8px;font-size:12px">+ 신규 옵션 추가</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="panel" id="p3">
+    <div class="page-title">생산 파라미터 설정</div>
+    <div class="page-sub">계산 기준과 원가·MOQ를 설정하세요</div>
+    <div class="card">
+      <div class="card-title">계산 기준</div>
+      <div class="param-grid">
+        <div class="param-item"><label>발주 데이터 가중치</label>
+          <select id="wmode" style="width:100%">
+            <option value="balanced">균형 (4주 기준)</option>
+            <option value="recent">최근 중시 (1주×4)</option>
+            <option value="long">장기 중시 (12주÷12)</option>
+          </select>
+        </div>
+        <div class="param-item"><label>안전 재고 비율 (%)</label>
+          <input type="number" id="safety" value="20" min="0" max="100" style="width:100%"/>
+        </div>
+        <div class="param-item"><label>리드타임 (주, 발주→입고)</label>
+          <input type="number" id="lead" value="8" min="1" max="52" style="width:100%"/>
+        </div>
+        <div class="param-item"><label>목표 재고 주수 (입고 후)</label>
+          <input type="number" id="tw" value="16" min="4" max="52" style="width:100%"/>
+        </div>
+      </div>
+      <div class="param-item">
+        <label>SKU 최소 생산 수량 (전체 일괄)</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="number" id="gmin" value="0" min="0" style="width:130px"/>
+          <span style="font-size:11px;color:var(--gray5)">개 미만이면 이 값으로 올림</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">원가 설정</div>
+      <div class="inline-row">
+        <div class="param-item"><label>생산 원가 (원/개)</label>
+          <input type="number" id="gcost" value="0" min="0" style="width:140px" oninput="applyGCost()"/>
+        </div>
+        <label class="cb-label"><input type="checkbox" id="costAll" checked onchange="toggleCost()"/>전체 동일 원가 적용</label>
+      </div>
+      <div id="costRows" style="display:none"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">컬러 MOQ 설정</div>
+      <div class="hint" style="margin-bottom:10px">사이즈 무관, 동일 컬러 합산 수량 기준으로 MOQ를 체크합니다.</div>
+      <div class="inline-row">
+        <div class="param-item"><label>컬러 MOQ (개)</label>
+          <input type="number" id="gmoq" value="0" min="0" style="width:140px" oninput="applyGMoq()"/>
+        </div>
+        <label class="cb-label"><input type="checkbox" id="moqAll" checked onchange="toggleMoq()"/>전체 동일 MOQ 적용</label>
+      </div>
+      <div id="moqRows" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="panel" id="p4">
+    <div class="page-title">생산 수량 계산 결과</div>
+    <div class="page-sub">추천 수량을 검토하고 직접 수정할 수 있어요</div>
+    <div id="resArea"><div class="alert alert-info">5단계 탭을 클릭하면 자동으로 계산됩니다.</div></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+let skus=[];
+let soOv={},laOv={},laRef={},laRatio={};
+let newN=0;
+const cmoq={};
+let xlsxWB=null;
+let xlsxSheetData=[];
+
+// ── 탭 전환 ──────────────────────────────
+function switchTab(t){
+  document.getElementById('tabUpload').style.display=t==='upload'?'block':'none';
+  document.getElementById('tabPaste').style.display=t==='paste'?'block':'none';
+  document.getElementById('tab-upload').classList.toggle('active',t==='upload');
+  document.getElementById('tab-paste').classList.toggle('active',t==='paste');
+}
+
+// ── 엑셀 파일 처리 ────────────────────────
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const file=e.dataTransfer.files[0];
+  if(file) handleFile(file);
+}
+
+function handleFile(file){
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+
+  if(ext==='csv'){
+    reader.onload=function(e){
+      const text=e.target.result;
+      parseCSVText(text,file.name);
+    };
+    reader.readAsText(file,'UTF-8');
+  } else {
+    reader.onload=function(e){
+      const data=new Uint8Array(e.target.result);
+      xlsxWB=XLSX.read(data,{type:'array'});
+      showSheetSelector(file.name);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function showSheetSelector(filename){
+  const sheetSel=document.getElementById('sheetSelect');
+  sheetSel.innerHTML='';
+  xlsxWB.SheetNames.forEach(n=>{
+    const o=document.createElement('option');
+    o.value=n;o.textContent=n;
+    sheetSel.appendChild(o);
+  });
+  document.getElementById('mappingArea').style.display='block';
+  document.getElementById('dropZone').querySelector('.upload-title').textContent=filename+' 업로드 완료';
+  onSheetChange();
+}
+
+function onSheetChange(){
+  const sheetName=document.getElementById('sheetSelect').value;
+  if(!xlsxWB) return;
+  const ws=xlsxWB.Sheets[sheetName];
+  xlsxSheetData=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  if(!xlsxSheetData.length) return;
+
+  const headers=xlsxSheetData[0].map((h,i)=>({label:String(h)||'컬럼'+(i+1),idx:i}));
+  const selIds=['colSku','colStock','colW1','colW4','colW12'];
+  const defaults=['옵션','재고','1주','4주','12주'];
+  selIds.forEach((id,si)=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML='<option value="-1">— 선택 안함 —</option>';
+    headers.forEach(h=>{
+      const o=document.createElement('option');
+      o.value=h.idx;
+      o.textContent=h.label;
+      sel.appendChild(o);
+    });
+    const autoIdx=headers.findIndex(h=>String(h.label).includes(defaults[si]));
+    sel.value=autoIdx>=0?autoIdx:(si===4?'-1':si);
+  });
+  // 상품명 prefix 셀렉트 채우기
+  const prefixSel=document.getElementById('colSkuPrefix');
+  prefixSel.innerHTML='<option value="-1">— 사용 안함 —</option>';
+  headers.forEach(h=>{const o=document.createElement('option');o.value=h.idx;o.textContent=h.label;prefixSel.appendChild(o);});
+  const autoPrefix=headers.findIndex(h=>String(h.label).includes('상품'));
+  prefixSel.value=autoPrefix>=0?autoPrefix:'-1';
+  renderPreview();
+}
+
+function buildSkuName(r,prefixIdx,skuIdx){
+  const prefix=prefixIdx>=0?String(r[prefixIdx]||'').trim():'';
+  const sku=skuIdx>=0?String(r[skuIdx]||'').trim():'';
+  if(prefix&&sku) return prefix+'_'+sku.replace(/^\[|\]$/g,'');
+  return sku||prefix;
+}
+
+function renderPreview(){
+  const rows=xlsxSheetData.slice(1,6);
+  if(!rows.length){document.getElementById('previewArea').innerHTML='';return;}
+  const prefixIdx=parseInt(document.getElementById('colSkuPrefix').value);
+  const skuIdx=parseInt(document.getElementById('colSku').value);
+  const stockIdx=parseInt(document.getElementById('colStock').value);
+  const w1Idx=parseInt(document.getElementById('colW1').value);
+  const w4Idx=parseInt(document.getElementById('colW4').value);
+  const w12Idx=parseInt(document.getElementById('colW12').value);
+
+  let html='<div style="font-size:11px;color:var(--gray5);margin-top:12px;margin-bottom:6px">미리보기 (상위 5행)</div>';
+  html+='<div style="overflow-x:auto"><table class="preview-table"><thead><tr>'
+    +'<th>SKU명 (조합 결과)</th><th>현재재고</th><th>1주발주</th><th>4주발주</th><th>12주발주</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    html+='<tr>'
+      +'<td style="color:var(--black);font-weight:500">'+buildSkuName(r,prefixIdx,skuIdx)+'</td>'
+      +'<td>'+(stockIdx>=0?r[stockIdx]:'—')+'</td>'
+      +'<td>'+(w1Idx>=0?r[w1Idx]:'—')+'</td>'
+      +'<td>'+(w4Idx>=0?r[w4Idx]:'—')+'</td>'
+      +'<td>'+(w12Idx>=0?r[w12Idx]:'—')+'</td>'
+      +'</tr>';
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('previewArea').innerHTML=html;
+}
+
+function applyMapping(){
+  const prefixIdx=parseInt(document.getElementById('colSkuPrefix').value);
+  const skuIdx=parseInt(document.getElementById('colSku').value);
+  const stockIdx=parseInt(document.getElementById('colStock').value);
+  const w1Idx=parseInt(document.getElementById('colW1').value);
+  const w4Idx=parseInt(document.getElementById('colW4').value);
+  const w12Idx=parseInt(document.getElementById('colW12').value);
+
+  if(skuIdx<0||stockIdx<0||w1Idx<0||w4Idx<0){
+    alert('SKU명, 현재재고, 1주발주, 4주발주는 필수로 선택해주세요.');return;
+  }
+  const dataRows=xlsxSheetData.slice(1).filter(r=>r[skuIdx]&&String(r[skuIdx]).trim());
+  skus=dataRows.map(r=>({
+    name:buildSkuName(r,prefixIdx,skuIdx),
+    stock:parseFloat(r[stockIdx])||0,
+    w1:parseFloat(r[w1Idx])||0,
+    w4:parseFloat(r[w4Idx])||0,
+    w12:w12Idx>=0?parseFloat(r[w12Idx])||0:0,
+    cost:0,productionQty:0,_wr:0
+  }));
+  afterParse();
+}
+
+function parseCSVText(text,filename){
+  const lines=text.split('\n').filter(l=>l.trim());
+  const delim=lines[0].includes('\t')?'\t':',';
+  const rows=lines.map(l=>l.split(delim).map(c=>c.replace(/^"|"$/g,'').trim()));
+  xlsxSheetData=rows;
+  xlsxWB={SheetNames:['CSV'],Sheets:{}};
+  document.getElementById('sheetSelect').innerHTML='<option value="CSV">'+filename+'</option>';
+  document.getElementById('mappingArea').style.display='block';
+  document.getElementById('dropZone').querySelector('.upload-title').textContent=filename+' 업로드 완료';
+  const headers=rows[0].map((h,i)=>({label:String(h)||'컬럼'+(i+1),idx:i}));
+  const selIds=['colSku','colStock','colW1','colW4','colW12'];
+  const defaults=['SKU','재고','1주','4주','12주'];
+  selIds.forEach((id,si)=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML='<option value="-1">— 선택 안함 —</option>';
+    headers.forEach(h=>{const o=document.createElement('option');o.value=h.idx;o.textContent=h.label;sel.appendChild(o);});
+    const autoIdx=headers.findIndex(h=>String(h.label).includes(defaults[si]));
+    sel.value=autoIdx>=0?autoIdx:(si===4?'-1':si);
+  });
+  renderPreview();
+}
+
+// ── 붙여넣기 파싱 ─────────────────────────
+function loadSample(){
+  document.getElementById('rawInput').value=
+`텐션브라_블랙_S\t45\t12\t48\t180
+텐션브라_블랙_M\t32\t18\t70\t250
+텐션브라_블랙_L\t18\t8\t32\t115
+텐션브라_베이지_S\t0\t2\t30\t115
+텐션브라_베이지_M\t8\t5\t38\t140
+텐션브라_베이지_L\t5\t1\t20\t80
+3D텐션브리프_블랙_S\t120\t25\t95\t320
+3D텐션브리프_블랙_M\t88\t22\t88\t300
+3D텐션브리프_블랙_L\t12\t3\t40\t150
+3D텐션브리프_화이트_S\t0\t0\t0\t0
+3D텐션브리프_화이트_M\t0\t0\t0\t0`;
+  parseFromPaste();
+}
+
+function parseFromPaste(){
+  const raw=document.getElementById('rawInput').value.trim();
+  if(!raw) return;
+  skus=raw.split('\n').filter(l=>l.trim()).map(l=>{
+    const c=l.split('\t');
+    return{name:c[0]?.trim()||'',stock:+c[1]||0,w1:+c[2]||0,w4:+c[3]||0,w12:+c[4]||0,cost:0,productionQty:0,_wr:0};
+  }).filter(s=>s.name);
+  afterParse();
+}
+
+function afterParse(){
+  if(!skus.length){document.getElementById('p0res').innerHTML='<div class="alert alert-warn">데이터를 읽을 수 없어요. 형식을 확인해주세요.</div>';return;}
+  document.getElementById('p0res').innerHTML='<div class="alert alert-ok"><strong>'+skus.length+'개 SKU</strong> 로드 완료! 다음 단계로 진행하세요.</div>';
+  markNav(0);
+  renderSO();renderColorMoqRows();renderCostRows();
+}
+
+// ── 저장/불러오기 ──────────────────────────
+function saveSession(){
+  const name=prompt('저장할 이름을 입력하세요\n예) 2024 3분기 생산계획');
+  if(!name) return;
+  const raw=document.getElementById('rawInput').value;
+  const data={
+    raw,skusJSON:JSON.stringify(skus),soOv,laOv,laRef,cmoq,
+    wmode:document.getElementById('wmode').value,
+    safety:document.getElementById('safety').value,
+    lead:document.getElementById('lead').value,
+    tw:document.getElementById('tw').value,
+    gmin:document.getElementById('gmin').value,
+    gcost:document.getElementById('gcost').value,
+    gmoq:document.getElementById('gmoq').value,
+    costAll:document.getElementById('costAll').checked,
+    moqAll:document.getElementById('moqAll').checked,
+  };
+  const sessions=JSON.parse(localStorage.getItem('adorish_sessions')||'{}');
+  const key=name+' ('+new Date().toLocaleDateString('ko-KR')+')';
+  sessions[key]=data;
+  localStorage.setItem('adorish_sessions',JSON.stringify(sessions));
+  refreshSessionList();
+  alert('저장 완료!');
+}
+
+function loadSession(key){
+  if(!key) return;
+  const sessions=JSON.parse(localStorage.getItem('adorish_sessions')||'{}');
+  const data=sessions[key];if(!data) return;
+  if(data.skusJSON) skus=JSON.parse(data.skusJSON);
+  Object.assign(soOv,data.soOv||{});
+  Object.assign(laOv,data.laOv||{});
+  Object.assign(laRef,data.laRef||{});
+  Object.assign(cmoq,data.cmoq||{});
+  ['wmode','safety','lead','tw','gmin','gcost','gmoq'].forEach(id=>{
+    if(data[id]!==undefined) document.getElementById(id).value=data[id];
+  });
+  if(data.raw) document.getElementById('rawInput').value=data.raw;
+  if(skus.length) afterParse();
+  alert(key+' 불러오기 완료!');
+  document.getElementById('sessionSelect').value='';
+}
+
+function refreshSessionList(){
+  const sel=document.getElementById('sessionSelect');
+  const sessions=JSON.parse(localStorage.getItem('adorish_sessions')||'{}');
+  sel.innerHTML='<option value="">— 저장된 데이터 불러오기 —</option>';
+  Object.keys(sessions).sort().reverse().forEach(k=>{
+    const o=document.createElement('option');o.value=k;o.textContent=k;sel.appendChild(o);
+  });
+}
+
+// ── 품절/런칭 ─────────────────────────────
+function ck(s){const p=s.name.split('_');return p.length>=2?p.slice(0,-1).join('_'):s.name;}
+function pk(s){return s.name.split('_')[0]||s.name;}
+
+function renderSO(){
+  let warns=0,launches=0;
+  let html='<div class="trow trow-head" style="grid-template-columns:1.9fr 48px 48px 48px 58px 52px 62px">'
+    +'<div>SKU</div><div style="text-align:right">재고</div><div style="text-align:right">1주</div>'
+    +'<div style="text-align:right">4주</div><div>상태</div><div style="text-align:center">품절</div><div style="text-align:center">런칭예정</div></div>';
+  skus.forEach((s,i)=>{
+    const w4a=s.w4/4;
+    const noData=s.stock===0&&s.w1===0&&s.w4===0&&s.w12===0;
+    let flags=noData?['미판매']:[];
+    if(!noData){
+      if(s.stock===0) flags.push('재고0');
+      if(s.w1===0&&s.w4>0) flags.push('1주없음');
+      if(w4a>0&&s.w1<w4a*0.4) flags.push('1주↓');
+    }
+    const isLa=laOv[i]!==undefined?laOv[i]:noData;
+    const isSo=soOv[i]!==undefined?soOv[i]:(flags.length>0&&!noData);
+    if(isLa) launches++; else if(flags.length) warns++;
+    html+='<div class="trow" style="grid-template-columns:1.9fr 48px 48px 48px 58px 52px 62px">';
+    html+='<div><div style="font-weight:500">'+s.name+'</div>';
+    if(flags.length) html+='<div style="font-size:10px;color:var(--red-text)">'+flags.join(' · ')+'</div>';
+    else html+='<div style="font-size:10px;color:var(--gray5)">이상없음</div>';
+    if(isLa){
+      html+='<div style="display:grid;grid-template-columns:1fr 100px;gap:6px;margin-top:5px">'
+        +'<input type="text" placeholder="참고 SKU (예: 뉴텐선업_블랙_M)" value="'+(laRef[i]||'')+'" style="font-size:11px" onchange="laRef['+i+']=this.value"/>'
+        +'<div style="display:flex;align-items:center;gap:4px">'
+        +'<input type="number" value="'+(laRatio[i]||100)+'" min="10" max="200" style="width:58px;font-size:11px" onchange="laRatio['+i+']=parseInt(this.value)||100" title="참고 SKU 판매량의 몇 %로 추정할지"/>'
+        +'<span style="font-size:10px;color:var(--gray5)">%</span>'
+        +'</div></div>';
+    }
+    html+='</div>';
+    html+='<div style="text-align:right">'+s.stock+'</div><div style="text-align:right">'+s.w1+'</div><div style="text-align:right">'+s.w4+'</div>';
+    html+='<div><span class="badge '+(noData?'badge-purple':flags.length?'badge-red':'badge-green')+'">'+(noData?'미판매':flags.length?'확인필요':'정상')+'</span></div>';
+    html+='<div style="text-align:center"><input type="checkbox" '+(isSo?'checked':'')+(isLa?' disabled':'')+" onchange=\"setSO("+i+",this.checked)\"/></div>";
+    html+='<div style="text-align:center"><input type="checkbox" '+(isLa?'checked':'')+" onchange=\"setLA("+i+",this.checked)\"/></div>";
+    html+='</div>';
+  });
+  let top='';
+  if(warns) top+='<div class="alert alert-warn">'+warns+'개 품절 의심 SKU — 확인 후 체크해주세요.</div>';
+  if(launches) top+='<div class="alert alert-info">'+launches+'개 미판매 SKU가 런칭 예정으로 자동 표시됐어요.</div>';
+  if(!warns&&!launches) top='<div class="alert alert-ok">이상 없음.</div>';
+  document.getElementById('soPanel').innerHTML=top+html;
+  markNav(1);
+}
+
+function setSO(i,v){soOv[i]=v;}
+function setLA(i,v){laOv[i]=v;if(v) soOv[i]=false;renderSO();}
+
+// ── MOQ/원가 ──────────────────────────────
+function renderColorMoqRows(){
+  const groups={};
+  skus.forEach((s,i)=>{const k=ck(s);if(!groups[k]) groups[k]={k,idx:[]};groups[k].idx.push(i);});
+  let html='';
+  Object.values(groups).forEach(g=>{
+    html+='<div class="color-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +'<span style="font-size:12px;font-weight:500">'+g.k+'</span>'
+      +'<span style="font-size:11px;color:var(--gray5)">'+g.idx.map(i=>skus[i].name.split('_').pop()).join(', ')+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--gray7)">MOQ</label>'
+      +'<input type="number" value="'+(cmoq[g.k]||0)+'" min="0" style="width:110px" oninput="cmoq[\''+g.k+'\']=parseInt(this.value)||0"/>'
+      +'<span style="font-size:11px;color:var(--gray5)">개</span></div></div>';
+  });
+  document.getElementById('moqRows').innerHTML=html;
+}
+function applyGMoq(){const v=parseInt(document.getElementById('gmoq').value)||0;skus.forEach(s=>{cmoq[ck(s)]=v;});renderColorMoqRows();}
+function toggleMoq(){const s=document.getElementById('moqAll').checked;document.getElementById('moqRows').style.display=s?'none':'block';if(s) applyGMoq();}
+
+function renderCostRows(){
+  let html='';
+  skus.forEach((s,i)=>{
+    html+='<div style="display:grid;grid-template-columns:1.6fr 130px;gap:8px;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--gray1)">'
+      +'<span style="font-size:12px">'+s.name+'</span>'
+      +'<input type="number" value="'+(s.cost||0)+'" min="0" style="width:100%" oninput="skus['+i+'].cost=parseInt(this.value)||0"/></div>';
+  });
+  document.getElementById('costRows').innerHTML=html;
+}
+function applyGCost(){const v=parseInt(document.getElementById('gcost').value)||0;skus.forEach(s=>s.cost=v);renderCostRows();}
+function toggleCost(){const s=document.getElementById('costAll').checked;document.getElementById('costRows').style.display=s?'none':'block';if(s) applyGCost();}
+
+// ── 신규 SKU ──────────────────────────────
+function addNew(){
+  newN++;const id='n'+newN;
+  const d=document.createElement('div');d.id=id;d.className='new-sku-box';
+  d.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--gray7);display:block;margin-bottom:4px">SKU명</label><input type="text" id="'+id+'n" placeholder="텐션브라_민트_S" style="width:100%"/></div>'
+    +'<div><label style="font-size:11px;color:var(--gray7);display:block;margin-bottom:4px">참고 SKU</label><input type="text" id="'+id+'r" placeholder="텐션브라_블랙_S" style="width:100%"/></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--gray7);display:block;margin-bottom:4px">수요 비율 (%) — 참고 SKU 판매량 대비</label><input type="number" id="'+id+'p" value="70" min="10" max="200" style="width:100%"/></div>'
+    +'<div><label style="font-size:11px;color:var(--gray7);display:block;margin-bottom:4px">원가 (원/개)</label><input type="number" id="'+id+'c" placeholder="0" style="width:100%"/></div></div>'
+    +'<button class="btn-secondary" style="font-size:11px;padding:5px 12px" onclick="document.getElementById(\''+id+'\').remove()">삭제</button>';
+  document.getElementById('newList').appendChild(d);
+}
+
+// ── 계산 ──────────────────────────────────
+function getWR(s,i){
+  const isLa=laOv[i]!==undefined?laOv[i]:(s.stock===0&&s.w1===0&&s.w4===0&&s.w12===0);
+  const isSo=soOv[i]!==undefined?soOv[i]:false;
+  if(isLa){
+    const ratio=(laRatio[i]||100)/100;
+    const refS=skus.find(x=>x.name===(laRef[i]||'').trim());
+    if(refS) return Math.round(getWR(refS,skus.indexOf(refS))*ratio);
+    const prod=pk(s);
+    const sibs=skus.filter((x,j)=>pk(x)===prod&&j!==i&&(x.w4>0||x.w12>0));
+    if(sibs.length) return Math.round(sibs.reduce((a,x)=>a+getWR(x,skus.indexOf(x)),0)/sibs.length*ratio);
+    return 0;
+  }
+  const mode=document.getElementById('wmode').value;
+  const w4a=s.w4/4,w12a=s.w12>0?s.w12/12:null;
+  if(isSo||s.w1===0) return w12a?Math.round((w4a+w12a)/2):Math.round(w4a);
+  if(mode==='recent') return s.w1>0?s.w1:Math.round(w4a);
+  if(mode==='long') return w12a?Math.round(w12a):Math.round(w4a);
+  return w12a?Math.round(s.w1*0.3+w4a*0.5+w12a*0.2):Math.round(s.w1*0.4+w4a*0.6);
+}
+
+function r10(n){return Math.round(n/10)*10;}
+
+function calcAll(){
+  if(!skus.length){document.getElementById('resArea').innerHTML='<div class="alert alert-warn">1단계에서 데이터를 먼저 입력해주세요.</div>';return;}
+  const safety=parseFloat(document.getElementById('safety').value)||20;
+  const lead=parseInt(document.getElementById('lead').value)||8;
+  const targetW=parseInt(document.getElementById('tw').value)||16;
+  const gmin=parseInt(document.getElementById('gmin').value)||0;
+  const today=new Date();
+  const fmt=d=>d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0');
+
+  const allSkus=[...skus];
+  document.querySelectorAll('[id^="n"]').forEach(el=>{
+    if(!/^n\d+$/.test(el.id)) return;
+    const id=el.id;
+    const name=document.getElementById(id+'n')?.value?.trim();if(!name) return;
+    const refS=skus.find(x=>x.name===(document.getElementById(id+'r')?.value?.trim()||''));
+    const pct=parseFloat(document.getElementById(id+'p')?.value||70)/100;
+    const cost=parseInt(document.getElementById(id+'c')?.value||0);
+    allSkus.push({name,stock:0,w1:0,w4:0,w12:0,cost,productionQty:0,_wr:Math.round((refS?getWR(refS,skus.indexOf(refS)):0)*pct),_isNew:true});
+  });
+
+  allSkus.forEach((s,i)=>{
+    if(!s._isNew) s._wr=getWR(s,i);
+    const wr=s._wr||0;
+    const needed=wr*(targetW+lead)*(1+safety/100);
+    let qty=r10(Math.max(0,needed-s.stock));
+    if(gmin>0&&qty>0&&qty<gmin) qty=r10(gmin);
+    if(qty===0&&wr>0&&s.stock<=wr*lead) qty=r10(gmin||wr*targetW);
+    s.productionQty=qty;
+  });
+
+  const cgroups={};
+  allSkus.forEach((s,i)=>{const k=ck(s);if(!cgroups[k]) cgroups[k]={idx:[]};cgroups[k].idx.push(i);});
+  Object.entries(cgroups).forEach(([k,g])=>{
+    const moq=cmoq[k]||0;if(moq<=0) return;
+    const total=g.idx.reduce((s,i)=>s+(allSkus[i].productionQty||0),0);
+    if(total>0&&total<moq){
+      const diff=moq-total;
+      const rates=g.idx.map(i=>({i,wr:allSkus[i]._wr||1}));
+      const tr=rates.reduce((s,x)=>s+x.wr,0)||1;
+      rates.forEach(x=>{allSkus[x.i].productionQty+=r10(diff*(x.wr/tr));});
+      const nt=g.idx.reduce((s,i)=>s+(allSkus[i].productionQty||0),0);
+      if(nt<moq){allSkus[g.idx[g.idx.length-1]].productionQty+=r10(moq-nt);}
+    }
+  });
+
+  let totQty=0,totCost=0;
+  const rows=allSkus.map((s,i)=>{
+    const qty=s.productionQty||0;totQty+=qty;totCost+=qty*(s.cost||0);
+    const wr=s._wr||0;
+    const wl=wr>0?s.stock/wr:9999,wlA=wr>0?(s.stock+qty)/wr:9999;
+    const sd=new Date(today.getTime()+wl*7*86400000);
+    const sdA=new Date(today.getTime()+wlA*7*86400000);
+    const isLa=s._isNew||(laOv[i]!==undefined?laOv[i]:(s.stock===0&&s.w1===0&&s.w4===0&&s.w12===0));
+    const isSo=!s._isNew&&(soOv[i]!==undefined?soOv[i]:false);
+    const urgent=!isLa&&wr>0&&wl<lead+2&&qty===0;
+    return '<div class="trow" style="grid-template-columns:1.7fr 48px 48px 72px 80px 90px">'
+      +'<div><div style="font-weight:500">'+s.name+'</div>'
+      +(s._isNew?'<span class="tag tag-purple">신규</span>':isLa?'<span class="tag tag-purple">런칭예정</span>':isSo?'<span class="tag tag-red">품절보정</span>':'<span class="tag tag-neu">정상</span>')
+      +(urgent?'<span class="tag tag-red">긴급</span>':'')+'</div>'
+      +'<div style="text-align:right">'+s.stock+'</div>'
+      +'<div style="text-align:right;color:var(--gray5)">'+wr+'</div>'
+      +'<div><input class="qty-input" type="number" value="'+qty+'" step="10" onchange="allSkus['+i+'].productionQty=r10(parseInt(this.value)||0);this.value=allSkus['+i+'].productionQty;reTotals(allSkus)"/></div>'
+      +'<div style="font-size:11px;color:'+(urgent?'var(--red-dark)':'var(--gray5)')+'">'+(!isLa&&wl<9000?fmt(sd):'—')+'</div>'
+      +'<div style="font-size:11px;color:var(--gray5)">'+(qty>0&&wlA<9000?fmt(sdA):qty>0?'충분':'생산없음')+'</div></div>';
+  });
+
+  const moqSum=Object.entries(cgroups).filter(([k])=>(cmoq[k]||0)>0).map(([k,g])=>{
+    const t=g.idx.reduce((s,i)=>s+(allSkus[i].productionQty||0),0),m=cmoq[k]||0;
+    return '<div class="moq-row"><span>'+k+'</span><span>'
+      +'<span style="color:var(--gray5)">합계 </span><strong>'+t.toLocaleString()+'</strong>'
+      +'<span style="color:var(--gray3);margin:0 4px">/</span><span style="color:var(--gray5)">MOQ '+m.toLocaleString()+'</span>'
+      +' <span class="badge '+(t>=m?'badge-green':'badge-red')+'">'+(t>=m?'충족':'미충족')+'</span></span></div>';
+  }).join('');
+
+  document.getElementById('resArea').innerHTML=
+    '<div class="stat-grid">'
+    +'<div class="stat-card"><div class="stat-label">총 생산 수량</div><div class="stat-val" id="tqd">'+totQty.toLocaleString()+'</div><div class="stat-sub">개</div></div>'
+    +'<div class="stat-card"><div class="stat-label">예상 총 원가</div><div class="stat-val" id="tcd">'+(totCost>0?'₩'+Math.round(totCost/10000)+'만':'미입력')+'</div><div class="stat-sub">'+(totCost>0?totCost.toLocaleString()+'원':'')+'</div></div>'
+    +'<div class="stat-card"><div class="stat-label">리드 / 목표</div><div class="stat-val">'+lead+'주</div><div class="stat-sub">입고 후 '+targetW+'주 · 안전재고 '+safety+'%</div></div></div>'
+    +(moqSum?'<div class="card"><div class="card-title">컬러 MOQ 충족 현황</div>'+moqSum+'</div>':'')
+    +'<div class="card" style="overflow-x:auto">'
+    +'<div class="trow trow-head" style="grid-template-columns:1.7fr 48px 48px 72px 80px 90px">'
+    +'<div>SKU</div><div style="text-align:right">재고</div><div style="text-align:right">주판매</div>'
+    +'<div style="text-align:right">생산수량</div><div>현재품절예상</div><div>생산후품절예상</div></div>'
+    +rows.join('')+'</div>'
+    +'<div class="btn-row">'
+    +'<button class="btn-primary" onclick="dlXLSX()">엑셀 다운로드 (.xls)</button>'
+    +'<button class="btn-secondary" onclick="saveSession()">결과 저장</button></div>';
+  markNav(4);
+  window._lastAllSkus=allSkus;
+}
+
+function reTotals(allSkus){
+  let t=0,c=0;allSkus.forEach(s=>{t+=s.productionQty||0;c+=(s.productionQty||0)*(s.cost||0);});
+  const tq=document.getElementById('tqd'),tc=document.getElementById('tcd');
+  if(tq) tq.textContent=t.toLocaleString();
+  if(tc) tc.textContent=c>0?'₩'+Math.round(c/10000)+'만':'미입력';
+}
+
+function dlXLSX(){
+  const allSkus=window._lastAllSkus;
+  if(!allSkus||!allSkus.length){alert('먼저 결과를 계산해주세요.');return;}
+  const today=new Date();
+  const fmt=d=>d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0');
+  const lead=parseInt(document.getElementById('lead').value)||8;
+  const safety=parseFloat(document.getElementById('safety').value)||20;
+  const targetW=parseInt(document.getElementById('tw').value)||16;
+  const totQty=allSkus.reduce((s,x)=>s+(x.productionQty||0),0);
+  const totCost=allSkus.reduce((s,x)=>s+(x.productionQty||0)*(x.cost||0),0);
+  const cgroups={};
+  allSkus.forEach((s,i)=>{const k=ck(s);if(!cgroups[k]) cgroups[k]={idx:[]};cgroups[k].idx.push(i);});
+
+  function esc(v){if(v===null||v===undefined)return '';return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function n(v,style){return '<Cell'+(style?' ss:StyleID="'+style+'"':'')+'><Data ss:Type="Number">'+v+'</Data></Cell>';}
+  function s(v,style){return '<Cell'+(style?' ss:StyleID="'+style+'"':'')+'><Data ss:Type="String">'+esc(v)+'</Data></Cell>';}
+
+  // 컬럼 순서: SKU(A), 생산수량(B), 타입, 현재재고, 주판매, 원가, 생산원가합계, 컬러그룹, 컬러MOQ, 현재품절예상, 생산후품절예상
+  const headers=['SKU','생산수량','타입','현재재고','주판매','원가(원)','생산원가합계','컬러그룹','컬러MOQ','현재품절예상','생산후품절예상'];
+  let hRow='<Row ss:Height="22">'+headers.map((h,i)=>s(h,i===1?'hY':'hD'))+'</Row>';
+
+  // 데이터행
+  let dataRows='';
+  allSkus.forEach((si,i)=>{
+    const type=si._isNew?'신규':(laOv[i]?'런칭예정':soOv[i]?'품절보정':'정상');
+    const wr=si._wr||0;
+    const wl=wr>0?si.stock/wr:9999;
+    const wlA=wr>0?(si.stock+(si.productionQty||0))/wr:9999;
+    const sd=wl<9000?fmt(new Date(today.getTime()+wl*7*86400000)):'충분';
+    const sdA=(si.productionQty>0&&wlA<9000)?fmt(new Date(today.getTime()+wlA*7*86400000)):si.productionQty>0?'충분':'생산없음';
+    const k=ck(si);
+    const qty=si.productionQty||0;
+    dataRows+='<Row>'+
+      s(si.name,'cB')+       // A=SKU
+      n(qty,'cY')+            // B=생산수량 (노란배경)
+      s(type,'cB')+           // C=타입
+      n(si.stock,'cN')+       // D=현재재고
+      n(wr,'cN')+             // E=주판매
+      n(si.cost||0,'cN')+     // F=원가
+      n(qty*(si.cost||0),'cN')+ // G=생산원가합계
+      s(k,'cB')+              // H=컬러그룹
+      n(cmoq[k]||0,'cN')+     // I=컬러MOQ
+      s(sd,'cB')+             // J=현재품절예상
+      s(sdA,'cB')+            // K=생산후품절예상
+    '</Row>';
+  });
+
+  // 요약 시트
+  let sumRows='<Row ss:Height="22">'+s('항목','hD')+s('값','hD')+'</Row>';
+  [['생성일',fmt(today),true],['총 생산 수량',totQty,false],['예상 총 원가 (원)',totCost,false],
+   ['리드타임',lead+'주',true],['목표 재고 주수',targetW+'주',true],['안전 재고 비율',safety+'%',true]
+  ].forEach(([k,v,isStr])=>{sumRows+='<Row>'+s(k,'cB')+(isStr?s(v,'cB'):n(v,'cN'))+'</Row>';});
+
+  // 컬러 MOQ 시트
+  let moqRows='';
+  const moqEntries=Object.entries(cgroups).filter(([k])=>(cmoq[k]||0)>0);
+  if(moqEntries.length){
+    moqRows='<Row ss:Height="22">'+['컬러그룹','MOQ','생산합계','충족여부'].map(h=>s(h,'hD')).join('')+'</Row>';
+    moqEntries.forEach(([k,g])=>{
+      const t=g.idx.reduce((a,i)=>a+(allSkus[i].productionQty||0),0);
+      moqRows+='<Row>'+s(k,'cB')+n(cmoq[k]||0,'cN')+n(t,'cN')+s(t>=(cmoq[k]||0)?'충족':'미충족','cB')+'</Row>';
+    });
+  }
+
+  // 열 너비: SKU(200), 생산수량(70), 타입(60), 현재재고(70), 주판매(60), 원가(70), 생산원가합계(90), 컬러그룹(160), 컬러MOQ(60), 현재품절예상(80), 생산후품절예상(80)
+  const colWidths=[200,70,60,70,60,70,90,160,60,80,80];
+
+  const xml='<?xml version="1.0" encoding="UTF-8"?>\n'
+    +'<?mso-application progid="Excel.Sheet"?>\n'
+    +'<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n'
+    +' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"\n'
+    +' xmlns:x="urn:schemas-microsoft-com:office:excel">\n'
+    +'<Styles>\n'
+    +'<Style ss:ID="hY"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="10"/><Interior ss:Color="#FFFF4D" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#262626"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#262626"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#262626"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#262626"/></Borders></Style>\n'
+    +'<Style ss:ID="hD"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="10" ss:Color="#FFFFFF"/><Interior ss:Color="#404040" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#262626"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#262626"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#262626"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#262626"/></Borders></Style>\n'
+    +'<Style ss:ID="cY"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="10"/><Interior ss:Color="#FFFFA6" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#262626"/></Borders></Style>\n'
+    +'<Style ss:ID="cB"><Alignment ss:Vertical="Center"/><Font ss:Size="10"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/></Borders></Style>\n'
+    +'<Style ss:ID="cN"><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><Font ss:Size="10"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#BFBFBF"/></Borders></Style>\n'
+    +'</Styles>\n'
+    +'<Worksheet ss:Name="생산계획">\n'
+    +'<Table>\n'
+    +colWidths.map(w=>'<Column ss:Width="'+w+'"/>').join('\n')+'\n'
+    +hRow+'\n'
+    +dataRows
+    +'</Table>\n'
+    +'<WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'
+    +'<FreezePanes/><SplitHorizontal>1</SplitHorizontal><TopRowBottomPane>1</TopRowBottomPane>\n'
+    +'</WorksheetOptions>\n'
+    +'</Worksheet>\n'
+    +'<Worksheet ss:Name="요약">\n'
+    +'<Table><Column ss:Width="150"/><Column ss:Width="120"/>'+sumRows+'</Table>\n'
+    +'</Worksheet>\n'
+    +(moqRows?'<Worksheet ss:Name="컬러MOQ"><Table><Column ss:Width="160"/><Column ss:Width="70"/><Column ss:Width="70"/><Column ss:Width="60"/>'+moqRows+'</Table></Worksheet>\n':'')
+    +'</Workbook>';
+
+  const blob=new Blob(['\uFEFF'+xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='adorish_생산계획_'+today.toISOString().slice(0,10)+'.xls';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},1000);
+}
+
+function go(idx){
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===idx));
+  document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active',i===idx));
+  if(idx===4) calcAll();
+}
+function markNav(idx){const n=document.getElementById('nav'+idx);if(n) n.style.opacity='1';}
+
+refreshSessionList();
+</script>
+</body>
+</html>
