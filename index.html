@@ -6,6 +6,7 @@
 <title>Adorish — 생산 수량 플래너</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --yellow:#FFFFA6;--black:#262626;--white:#ffffff;
@@ -349,9 +350,14 @@ function handleFile(file){
     reader.readAsText(file,'UTF-8');
   } else {
     reader.onload=function(e){
-      const data=new Uint8Array(e.target.result);
-      xlsxWB=XLSX.read(data,{type:'array'});
-      showSheetSelector(file.name);
+      try{
+        const data=new Uint8Array(e.target.result);
+        if(typeof XLSX==='undefined') throw new Error('XLSX 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.');
+        xlsxWB=XLSX.read(data,{type:'array'});
+        showSheetSelector(file.name);
+      }catch(err){
+        alert('파일을 읽는 중 오류가 발생했어요: '+err.message);
+      }
     };
     reader.readAsArrayBuffer(file);
   }
